@@ -183,8 +183,54 @@ unsigned int c)
 	return rv;
 }
 
+
+static int accumulate_matricization(MatrixXd &Ta, VectorXd C, VectorXd Wc, MatrixXd W, unsigned int length, double a0, VectorXd m1, unsigned int kstart, unsigned int kend, unsigned int k, unsigned int na)
+{
+
+// Ta is the output whitened M3
+// C is the count vector
+// Wc is the whitened count vector
+// W is the whitening matrix
+// m1 is the whitened mean vector
+
+	if (length > 2)
+	{
+		double scale2fac = a0 * (a0 + 1.0)/ (2.0 * length * (length - 1));
+		double scale3fac = (a0 + 1.0) * (a0 + 2.0)/ (2.0 * length * (length - 1) * (length - 2));
+		for (unsigned int i = kstart; i <= kend; ++i)
+		{
+			for (unsigned int j = 0; j < k; ++j)
+			{
+				for (unsigned int l = 0; l < k; ++l)
+				{
+					Ta(i - kstart,k*j + l) += scale3fac * Wc[i] * Wc[j] * Wc[l]; // term 11
+
+					for (unsigned int ii = 0; ii < na; ++ii)
+					{
+						Ta(i - kstart,k*j + l) += 2.0 * scale3fac * C[ii] * W(ii,i) * W(ii,j) * W(ii,l);  // term 13
+
+						Ta(i - kstart,k*j + l) -= scale2fac * C[ii] * W(ii,i) * W(ii,j) * m1[l];  // term 21
+						Ta(i - kstart,k*j + l) -= scale2fac * C[ii] * W(ii,i) * m1[j] * W(ii,l);  // term 22
+						Ta(i - kstart,k*j + l) -= scale2fac * C[ii] * m1[i] * W(ii,j) * W(ii,l); // term 23
+						
+						for (unsigned int jj = 0; jj < na; ++jj)
+						{
+							Ta(i - kstart,k*j + l) -= scale3fac * C[ii] * C[jj] * W(ii,i) * W(ii,j) * W(jj,l);  // term 12
+							Ta(i - kstart,k*j + l) -= scale3fac * C[ii] * C[jj] * W(ii,i) * W(jj,j) * W(ii,l);  // term 12
+							Ta(i - kstart,k*j + l) -= scale3fac * C[ii] * C[jj] * W(jj,i) * W(ii,j) * W(ii,l);  // term 12
+						}
+					}
+
+				}
+			}
+		}
+	}
+	return (length > 2);
+
+}
+/*
 static int
-accumulate_matricization(MatrixXd &Ta, VectorXd Wc, unsigned int length, double a0, VectorXd m1, unsigned int kstart, unsigned int kend, unsigned int k)
+accumulate_matricization(MatrixXd &Ta, VectorXd C, unsigned int length, double a0, VectorXd m1, unsigned int kstart, unsigned int kend, unsigned int k)
 {
 	if (length > 2)
 	{
@@ -201,46 +247,45 @@ accumulate_matricization(MatrixXd &Ta, VectorXd Wc, unsigned int length, double 
 			{
 				for (unsigned int l = 0; l < k; ++l)
 				{
-					/* Wc ( Wc \odot Wc )^\top */
-					/*topic shift scale3fac first term*/
+					// Wc ( Wc \odot Wc )^\top 
+					// topic shift scale3fac first term
 
 					Ta(i - kstart,k*j + l) += scale3fac * Wc[i] * Wc[l] * Wc[j];
 
-					/*dirichelet second order term (new term!!!)*/
+					// dirichelet second order term (new term!!!)
 					Ta(i - kstart,k*j + l) -= scale2fac * Wc[i] * m1[l] * Wc[j];
 					Ta(i - kstart,k*j + l) -= scale2fac * Wc[i] * Wc[l] * m1[j];
 					Ta(i - kstart,k*j + l) -= scale2fac * m1[i] * Wc[l] * Wc[j];
 				}
 
-				/* - \sum_{i=1}^d \sum_{j=1}^d Wc_i Wc_j e_i (e_i \odot e_j)^\top
+				// - \sum_{i=1}^d \sum_{j=1}^d Wc_i Wc_j e_i (e_i \odot e_j)^\top
 				- \sum_{i=1}^d \sum_{j=1}^d Wc_i Wc_j e_i (e_j \odot e_i)^\top
 				- \sum_{i=1}^d \sum_{j=1}^d Wc_i Wc_j e_i (e_j \odot e_j)^\top
-				*/
-				/*tpic shift scale3fac 2nd, 3rd, 4th term*/
+				
+				//tpic shift scale3fac 2nd, 3rd, 4th term
 				Ta(i - kstart,k*i + j) -= scale3fac * Wc[i] * Wc[j];
 				Ta(i - kstart,k*j + i) -= scale3fac * Wc[i] * Wc[j];
 				Ta(i - kstart,k*j + j) -= scale3fac * Wc[i] * Wc[j];
 
-				/* - \sum_{j=1}^d Wc_j e_j (e_j \odot m1)^\top
+				// - \sum_{j=1}^d Wc_j e_j (e_j \odot m1)^\top
 				- \sum_{j=1}^d Wc_j e_j (m1 \odot e_j)^\top
-				- \sum_{j=1}^d Wc_j m1 (e_j \odot e_j)^\top */
-				/*this is problematic*/
+				- \sum_{j=1}^d Wc_j m1 (e_j \odot e_j)^\top 
+				
 				Ta(i - kstart,k*i + j) += scale2fac * Wc[i] * m1[j];
 				Ta(i - kstart,k*j + i) += scale2fac * Wc[i] * m1[j];
 				Ta(i - kstart,k*j + j) += scale2fac * m1[i] * Wc[j];
 			}
 
-			/* + 2 \sum_{i=1}^d Wc_i e_i (e_i \odot e_i)^\top */
-			/*topic shift scale3fac fifth term */
+			// + 2 \sum_{i=1}^d Wc_i e_i (e_i \odot e_i)^\top
 			Ta(i - kstart,k*i + i) += 2.0 * scale3fac * Wc[i];
 		}
 	}
-
 	return (length > 2);
+
 }
+*/
 
-
-void Compute_M3_topic(MatrixXd whitenedData, VectorXd whitenedMean, VectorXd Lengths, MatrixXd &Ta){
+void Compute_M3_topic(MatrixXd countData, MatrixXd W, MatrixXd whitenedData, VectorXd whitenedMean, VectorXd Lengths, MatrixXd &Ta){
 	unsigned int k = KHID;
 	unsigned int kstart = 0;	unsigned int kend = k-1;	assert(kend < k);
 	unsigned int krange = 1 + (kend - kstart);
@@ -249,7 +294,8 @@ void Compute_M3_topic(MatrixXd whitenedData, VectorXd whitenedMean, VectorXd Len
 
 	for (unsigned long long int examples = 0; examples < NX; ++examples){
 		VectorXd currentDataPoint = whitenedData.col(examples);
-		accumulate_matricization(Ta, currentDataPoint, (unsigned int)Lengths(examples), alpha0, whitenedMean, kstart, kend, k);
+		VectorXd currentDataCount = countData.col(examples);
+		accumulate_matricization(Ta, currentDataCount, currentDataPoint, W, (unsigned int)Lengths(examples), alpha0, whitenedMean, kstart, kend, k, NA);
 	}
 
 	Ta /= NX;

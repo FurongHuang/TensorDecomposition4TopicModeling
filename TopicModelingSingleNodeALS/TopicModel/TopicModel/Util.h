@@ -19,7 +19,7 @@ void accumulate_M_mul_S(SparseMatrix<double> Gx_a, SparseMatrix<double> RandomMa
 	SparseMatrix<double> & M2_a, VectorXd & mu_a, VectorXd &Lengths);
 void second_whiten_topic(SparseMatrix<double> Gx_a, \
 	SparseMatrix<double> &W, VectorXd &mu_a, SparseMatrix<double> &Uw, SparseMatrix<double> &diag_Lw_sqrt_inv_s, VectorXd &Lengths, bool M2_yes, SparseMatrix<double> &input_M2);
-void Compute_M3_topic(MatrixXd whitenedData, VectorXd whitenedMean, VectorXd Lengths, MatrixXd & Ta);
+void Compute_M3_topic(MatrixXd countData, MatrixXd W, MatrixXd whitenedData, VectorXd whitenedMean, VectorXd Lengths, MatrixXd & Ta);
 void update_mode_oneiteration(MatrixXd rhs, MatrixXd C_old, MatrixXd B_old, MatrixXd &A_new);
 double tensorDecom_batchALS(MatrixXd T, VectorXd & lambda, MatrixXd & A_new);
 void tensorReconstruct(MatrixXd &T, MatrixXd A, MatrixXd B, MatrixXd C,VectorXd lambda);

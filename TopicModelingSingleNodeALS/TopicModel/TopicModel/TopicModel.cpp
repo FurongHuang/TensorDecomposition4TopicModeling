@@ -146,7 +146,7 @@ int main(int argc, const char * argv[])
 	MatrixXd T(KHID, KHID * KHID);
 	if (!M3_yes){
 		T = MatrixXd::Zero(KHID, KHID*KHID);
-		Compute_M3_topic((MatrixXd)Data_a_G, Data_a_mu, Lengths, T);
+		Compute_M3_topic((MatrixXd) Gx_a.transpose() , (MatrixXd) W,(MatrixXd) Data_a_G, Data_a_mu, Lengths, T);
 	} else if (M3_yes){
 		T = input_M3;
 	}

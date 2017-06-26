@@ -205,7 +205,7 @@ double Calculate_Pvalue(double x[], double y[], long len) // calculating p value
 	double normcutoff = 1e7;
 	// Initialize P.
 	p = NAN;
-	bool nans = (isnan(t) || n <= 0);
+	bool nans = (std::isnan(t) || n <= 0.0);
 	if (n == 1)
 	{
 		p = 0.5 + atan(t) / M_PI;
